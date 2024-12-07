@@ -1,0 +1,1 @@
+/usr/bin/c++ -fPIC -flto -shared  -o geometric_plan_c.cpython-310-x86_64-linux-gnu.so CMakeFiles/geometric_plan_c.dir/geometric_plan.cpp.o 

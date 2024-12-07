@@ -1,0 +1,3 @@
+/home/doug/estimation_method-1/Continuous/build/CMakeFiles/geometric_plan_c.dir
+/home/doug/estimation_method-1/Continuous/build/CMakeFiles/edit_cache.dir
+/home/doug/estimation_method-1/Continuous/build/CMakeFiles/rebuild_cache.dir

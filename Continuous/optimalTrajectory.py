@@ -10,7 +10,7 @@ import time
 import sys
 
 
-#sys.path.append("./ompl-1.6.0/py-bindings")
+sys.path.append("./ompl-1.6.0/py-bindings")
 
 from ompl import base as ob
 from ompl import geometric as og
@@ -24,7 +24,6 @@ def sample_observations(O_Optimal, num_obser):
     sampled_points = sampled_points[1:-1]
     print("Step Time Observations:", sampled_points)
     return sampled_points
-
 
 def calculate_distance(starting, destination):  # euclidean distance
     distance = math.sqrt((destination[0] - starting[0]) ** 2 + (destination[1] - starting[1]) ** 2)  # calculates Euclidean distance (straight-line) distance between two points

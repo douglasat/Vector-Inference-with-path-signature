@@ -170,7 +170,7 @@ class Tree():
         for k in range(len(branch_unsorted)):
             for node in branch_unsorted:
                 if k in node.all_levels:
-                    branch_sorted.append(node.identifier)
+                    branch_sorted.append(node.data)
 
         return branch_sorted
 
@@ -376,22 +376,10 @@ if __name__ == "__main__":
     tree.naming()
     tree.merge()
     # tree.prune()
-    tree.render("output", "tree.gv")
+    # tree.render("output", "tree.gv")
+    bla = tree.get_all_signature_by_branch(1)
 
-    level_ord = []
-    k = 0
-    nodes = tree.get_node_by_level(k)
-    while len(nodes) > 0:
-        level_k = []
-        for node in nodes:
-            level_k.append(node.identifier)
-        level_ord.append(level_k)
-        k = k + 1
-        nodes = tree.get_node_by_level(k)
-
-    for l in level_ord:
-        print(len(l))
-
+    print(bla)
 
     # tree.merge()
 

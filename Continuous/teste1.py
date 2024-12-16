@@ -1,17 +1,42 @@
+import numpy as np
+import matplotlib.pyplot as plt
 from fastdtw import fastdtw
 from scipy.spatial.distance import euclidean
-import numpy as np
 from frechetdist import frdist
 
-# Define two trajectories
-trajectory1 = [(0.0, 0.0), (1.1, 1.2), (2.3, 2.1), (3.5, 3.7)]
-trajectory2 = [(0.0, 0.0), (1.0, 2.0), (2.2, 1.8), (3.6, 3.5)]
-a = np.array([1,2,3,4,5])
 
-print(a.reshape(-1,1))
+def filter_alignment_path(path):
+    used_indices_1 = set()
+    used_indices_2 = set()
+    filtered_path = []
 
-# Compute DTW distance and alignment path
-distance = frdist(trajectory1, trajectory2)
+    # Iterate in reverse order to prioritize the last matches
+    for i, j in reversed(path):
+        if i not in used_indices_1 and j not in used_indices_2:
+            filtered_path.append((i, j))
+            used_indices_1.add(i)
+            used_indices_2.add(j)
 
-# Compute aligned version of trajectory2
-print(distance)
+    # Reverse the filtered path to restore original order
+    filtered_path.reverse()
+    return filtered_path
+
+
+# Load the optimal observations computed with optimalTrajectory.py
+loaded_data = np.load('./%s/group%d/stateData%d%d.npz' % ('Aftershock', 0, 0, 1), allow_pickle=True)
+
+O_Optimal1 = loaded_data['O_Optimal']
+
+# Load the optimal observations computed with optimalTrajectory.py
+loaded_data = np.load('./%s/group%d/stateData%d%d.npz' % ('Aftershock', 0, 0, 2), allow_pickle=True)
+
+O_Optimal2 = loaded_data['O_Optimal']
+
+obs = 50
+distance, path = fastdtw(O_Optimal2[0:2, 0:obs+1].T, O_Optimal1[0:2, :].T, dist=euclidean)
+
+print(path)
+
+print(filter_alignment_path(path))
+
+print(max(1,2))

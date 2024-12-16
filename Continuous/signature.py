@@ -7,7 +7,8 @@ from os.path import isfile, join
 import numpy as np
 import signatory
 import torch
-import esig
+from fastdtw import fastdtw
+from scipy.spatial.distance import euclidean
 
 
 @dataclass
@@ -61,13 +62,17 @@ class Signatures:
 if __name__ == "__main__":
     x = Signatures(device="cpu")
 
-    loaded_data = np.load('./Aftershock/group0/stateData01.npz', allow_pickle=True)
+    loaded_data1 = np.load('./Aftershock/group0/stateData01.npz', allow_pickle=True)
+    loaded_data2 = np.load('./Aftershock/group0/stateData01.npz', allow_pickle=True)
 
-    O_Optimal = loaded_data['O_Optimal']
 
-    signature1 = esig.tosig.stream2sig(O_Optimal[0:2, :].T, 2)
-    sig = x.get_signature(O_Optimal[0:2, :].T)[0]
+
+    O_Optimal1 = loaded_data1['O_Optimal']
+    O_Optimal2 = loaded_data2['O_Optimal']
+
+    sig1 = x.get_all_signatures(O_Optimal1[0:2, :].T)
+    sig2 = x.get_all_signatures(O_Optimal2[0:2, :].T)
     #sig = x.get_all_signatures(O_Optimal[0:2, :].T)[0]
 
-    print(signature1)
-    print(sig)
+    distance_dtw, path = fastdtw(sig1[1:10+1], sig1[1:], dist=euclidean)
+    print(distance_dtw)

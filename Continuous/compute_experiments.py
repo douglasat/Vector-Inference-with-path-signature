@@ -27,5 +27,5 @@ if __name__ == "__main__":
         #     subprocess.run('python3 estimation_method_multiple_mod.py %s %d' % (scenario, int(sys.argv[-1])), shell=True)
         if 'vector_path_signature' in sys.argv and ('all' in sys.argv or scenario in sys.argv):
             print('Computing Vector Inference Method with Path Signature')
-            subprocess.run('python3 estimation_method_path_signature.py %s %d' % (scenario, int(sys.argv[-1])), shell=True)
+            subprocess.run('python3 estimation_method_path_signature_topk_dtw.py %s %d' % (scenario, int(sys.argv[-1])), shell=True)
    

@@ -574,10 +574,10 @@ if __name__ == "__main__":
 
         problem_number = [[initial, goal] for initial in range(0, len(scenario.goalPoints)) for goal in range(0, len(scenario.goalPoints)) if initial != goal]
 
-        # obs = vector_inference_multi(0, 2)[0]
-        # print(obs)
-        # output.save_probability(obs[0], obs[1], obs[2], obs[3], obs[4], obs[5])
-        # bla
+        obs = vector_inference_multi(0, 2)[0]
+        print(obs)
+        output.save_probability(obs[0], obs[1], obs[2], obs[3], obs[4], obs[5])
+        bla
 
         # Create a ProcessPoolExecutor
         with concurrent.futures.ProcessPoolExecutor(max_workers=num_cores) as executor:

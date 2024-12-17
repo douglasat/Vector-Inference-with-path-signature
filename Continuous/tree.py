@@ -15,6 +15,7 @@ class Node():
 
     def __init__(self, identifier: Union[str, tuple], data: Any = None, level: int = -1):
         self.identifier: Union[str, tuple[float]] = identifier
+        self.original_identifier = identifier
         self.data: Any = data
         self.children: list["Node"] = []
         self.label: str = ""
@@ -39,7 +40,7 @@ class Node():
             raise ValueError("Node already exists in children")
 
     def __repr__(self) -> str:
-        return f"Node({self.label}, {self.data})"
+        return f"Node({self.label}, {self.data}, {[child.label for child in self.children]})"
 
     def __eq__(self, node: "Node") -> bool:
         return self.identifier == node.identifier
@@ -251,12 +252,13 @@ class Tree():
                         message = f"Merging {child.label} and "
                         message += f"{sibling.label} distance {node_distance}"
                         print(message)
+
                     child.data.extend(sibling.data)
                     child.data = list(set(child.data))
                     child.children.extend(sibling.children)
                     child.merge_globbed.append(sibling)
                     node.remove(sibling)
-                    self.nodes.pop(sibling.identifier, 1)
+                    del self.nodes[sibling.original_identifier]
                     
                     if reduce == "average":
                         st_signature = np.array(child.identifier)
@@ -291,8 +293,7 @@ class Tree():
                 node.prune_globbed.append(child)
                 node.all_levels.append(child.original_level)
                 node.remove(child)
-                #self.nodes.remove(child)
-                self.nodes.pop(child.identifier, 1)
+                del self.nodes[child.original_identifier]
 
         if changed:
             self.prune(node)

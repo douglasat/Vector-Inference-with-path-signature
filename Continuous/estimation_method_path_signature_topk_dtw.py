@@ -253,7 +253,6 @@ def getEstimationPath(init, goals):  # compute an estimation from init to each g
                 nodes = trees[str(g)].get_node_by_level(k)
                 print(nodes)
 
-
             trees[str(g)].prune()
 
             for k in range(100):

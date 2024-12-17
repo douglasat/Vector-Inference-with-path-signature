@@ -75,4 +75,6 @@ if __name__ == "__main__":
     #sig = x.get_all_signatures(O_Optimal[0:2, :].T)[0]
 
     distance_dtw, path = fastdtw(sig1[1:10+1], sig1[1:], dist=euclidean)
-    print(distance_dtw)
+    a = [1]
+    a.append(1e6)
+    print(a)

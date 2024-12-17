@@ -105,9 +105,9 @@ def rolloutViapoints(u, viaPoints):  # rollout using the via points to compute a
 
 
 def fun_Policy(u, viaPoints):  # cost function getEstimationPath
-    # u = np.array(np.split(u, len(viaPoints) - 1))
-    # return sum(u[:, 2])
-    return u[2]
+    u = np.array(np.split(u, len(viaPoints) - 1))
+    return sum(u[:, 2])
+    #return u[2]
 
 
 def interpolate_path(viapoints, max_dist):
@@ -135,58 +135,41 @@ def interpolate_path(viapoints, max_dist):
     return viapoints_mod
 
 
-def compute_RLapproximation(init, g, seed):
-    np.random.seed(12345)
-    max_viapoints_distance = 1
-
-    # print("Computing an approximated trajectory to Goal:", gk)
-    viaPoints = np.array(optimalTrajectory.geometric_plan(init, g, scenario, seed, 'single')[0])  # compute the via points
-    viaPoints = interpolate_path(viaPoints, max_viapoints_distance)
-
-    bnd = [(-scenario.vmax, scenario.vmax), (-scenario.vmax, scenario.vmax), (0.2, 1.2*max_viapoints_distance/scenario.vmax)] # bounds
-    ineq_cons1 = {'type': 'ineq', 'fun': lambda z: velMax(z, viaPoints, scenario.vmax, u, i)}  # constrains
-
-    u = []
+def velMax_group(u, viaPoints, vmax):
+    vel = []
+    u = np.split(u, len(viaPoints) - 1)
     for k in range(len(viaPoints) - 1):
-        u.append([0, 0, 1.2*max_viapoints_distance/scenario.vmax])
+        a = u[k]
+        vel.append(velMax(a, viaPoints, vmax, u, k))
 
-    prevFun = 1
-    nowFun = 0
-    count_min = 0
-    while (np.linalg.norm(prevFun - nowFun) >= 1e-4) and count_min < 25:  # find the velocity and td for each via points
-        prevFun = nowFun
-        for i in range(len(viaPoints) - 1):
-            result = sp.optimize.minimize(fun_Policy, u[i], args=(u), options={'maxiter': 500}, bounds=bnd,
-                                                constraints=ineq_cons1, method='SLSQP')
-            
-            u[i] = result.x
+    return vel    
 
-        u = np.array(u)
-        nowFun = sum(u[:, 2])
-        count_min += 1
 
+def compute_approximation(init, g, seed):
+    np.random.seed(12345)
+    dist_viapoints = 1
+    # print("Computing an approximated trajectory to Goal:", gk)
+    viaPoints = np.array(optimalTrajectory.geometric_plan(init, g, scenario, seed,'single')[0])  # compute the via points
+    viaPoints = interpolate_path(viaPoints, dist_viapoints)
+    
+    bnd = []
+    u = []
+    for _ in range(len(viaPoints) - 1):
+        bnd.extend([(-scenario.vmax, scenario.vmax), (-scenario.vmax, scenario.vmax), (0.2, 1.2*dist_viapoints/scenario.vmax)])  # bounds
+        u.extend([0, 0, 1.2*dist_viapoints/scenario.vmax])
+    
+    ineq_cons1 = {'type': 'ineq', 'fun': lambda z: velMax_group(z, viaPoints, scenario.vmax)}  # constrains
+
+    result = sp.optimize.minimize(fun_Policy, u, args=(viaPoints), options={'maxiter': 500}, bounds=bnd, 
+                          constraints=ineq_cons1, method='SLSQP')
+
+    u = np.array(np.split(result.x, len(viaPoints) - 1))
     qx, qy, qdotx, qdoty = rolloutViapoints(u, viaPoints)  # compute the full path trajectory with all viapoints terms
-
-    #gx = np.full(len(qx), g[0])
-    #gy = np.full(len(qy), g[1])
-
-    #dist_to_goal = np.linalg.norm(np.array([qx, qy]) - [gx, gy], axis=0)
+    
     path = np.array([qx, qy])
     sig_path = sig.get_all_signatures(path.T)
 
     return [[qx, qy, qdotx, qdoty, sig_path]]
-    
-
-def getTrajectory_branch(tree, x_eval, y_eval, k):
-    x_tree = []
-    y_tree = []
-    branch = tree.get_all_signature_by_branch(str(k))
-    if len(branch) > 0:
-        for j, b in enumerate(branch):
-            x_tree.append(np.mean([x_eval[int(i)][j] for i in b]))
-            y_tree.append(np.mean([y_eval[int(i)][j] for i in b]))
-    
-    return x_tree, y_tree
 
 
 def getEstimationPath(init, goals):  # compute an estimation from init to each goal in the set
@@ -194,7 +177,7 @@ def getEstimationPath(init, goals):  # compute an estimation from init to each g
     trees = {}
     roots = {}
     for g in scenario.goalPoints:
-        tree = Tree(merge_threshold=1, prune_threshold=0)
+        tree = Tree(merge_threshold=merge, prune_threshold=prune)
         root = Node(identifier=(1,), data=[], level=0)
         tree.add_node(root)
         trees[str(g)] = tree
@@ -216,7 +199,7 @@ def getEstimationPath(init, goals):  # compute an estimation from init to each g
             # Create a ProcessPoolExecutor
             with concurrent.futures.ProcessPoolExecutor(max_workers=top_k) as executor:
                 # Submit tasks to the executor
-                futures = [executor.submit(compute_RLapproximation, init, g, k) for k in range(top_k)]
+                futures = [executor.submit(compute_approximation, init, g, k) for k in range(top_k)]
 
                 # Wait for all tasks to complete
                 completed_futures, _ = concurrent.futures.wait(futures, return_when=concurrent.futures.ALL_COMPLETED)    
@@ -244,27 +227,21 @@ def getEstimationPath(init, goals):  # compute an estimation from init to each g
                     previous = node
             
             trees[str(g)].naming()
-            trees[str(g)].merge()
-            # trees[str(g)].render("output", "tree.gv")
-            
+            trees[str(g)].prune()
+            #trees[str(g)].merge()
+            trees[str(g)].render("output", "tree.gv")
+
             k = 0
-            last_node = 0
-            max_data_legth = 0
             nodes = trees[str(g)].get_node_by_level(k)
             while len(nodes) > 0:
                 level_k = []
-                length_data = []
                 for node in nodes:
                     level_k.append(node.identifier)
-                    length_data.append(node.data)
                 
-                max_data_legth = max(max_data_legth, len(length_data))
                 sig_by_goal[str(g)].append(level_k)
-                last_node = k
                 k = k + 1
                 nodes = trees[str(g)].get_node_by_level(k)
 
-            #trees[str(g)].prune()
             x[str(g)] = x_eval
             y[str(g)] = y_eval
 
@@ -316,12 +293,18 @@ def vector_inference_multi(initial, goal):
             signatures_by_level = sig_by_goal[str(goal_Hypothese)]
             if len(signatures_by_level) - 1 >= obs:
                 for sig_g in signatures_by_level[obs]:
-                    error = np.linalg.norm(sig_path_observations - np.array(sig_g)) # inference process
-                    sig_group.append(error)   
+                    if not sig_g == (1,): 
+                        error = np.linalg.norm(sig_path_observations - np.array(sig_g)) # inference process
+                        sig_group.append(error)
+                    else:
+                        sig_group.append(1e10)   
             else:
                 for sig_g in signatures_by_level[-1]:
-                    error = np.linalg.norm(sig_path_observations - np.array(sig_g)) # inference process
-                    sig_group.append(error)
+                    if not sig_g == (1,):
+                        error = np.linalg.norm(sig_path_observations - np.array(sig_g)) # inference process
+                        sig_group.append(error)
+                    else:
+                        sig_group.append(1e10)
 
             prob.append(np.min(sig_group))
 
@@ -335,9 +318,9 @@ def vector_inference_multi(initial, goal):
 
 
 if __name__ == "__main__":
-    top_k = 5 # number of solutions in the inference process
-    prune_threshold = 0.5
-
+    top_k = 2 # number of solutions in the inference process
+    merge = 1
+    prune = 5
     #Number of cores used in the process
     try:
         if int(sys.argv[2]):
@@ -372,7 +355,7 @@ if __name__ == "__main__":
 
         problem_number = [[initial, goal] for initial in range(0, len(scenario.goalPoints)) for goal in range(0, len(scenario.goalPoints)) if initial != goal]
         
-        obs = vector_inference_multi(7, 2)[0]
+        obs = vector_inference_multi(7, 0)[0]
         print(obs)
         output.save_probability(obs[0], obs[1], obs[2], obs[3], obs[4], obs[5])
         bla

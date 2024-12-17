@@ -156,8 +156,8 @@ class Tree():
         return [node for node in self.nodes.values() if level in node.all_levels]
 
 
-    def get_all_signature_by_branch(self, branch: Any) -> list[Node]:
-        """ Get a signatures from the tree by branch
+    def get_all_nodes_by_branch(self, branch: Any) -> list[Node]:
+        """ Get all nodes from the tree by branch
 
         Args:
             branch (Any)
@@ -165,14 +165,8 @@ class Tree():
         Returns:
             list[Node]: The list of nodes
         """
-        branch_unsorted = [node for node in self.nodes.values() if branch in node.data]
-        branch_sorted = []
-        for k in range(len(branch_unsorted)):
-            for node in branch_unsorted:
-                if k in node.all_levels:
-                    branch_sorted.append(node.data)
-
-        return branch_sorted
+        return [node for node in self.nodes.values() if str(branch) in node.data]
+        
 
     def to_dict(self) -> dict[str, Any]:
         """ Convert the tree to a dictionary

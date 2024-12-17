@@ -35,8 +35,6 @@ O_Optimal2 = loaded_data['O_Optimal']
 obs = 50
 distance, path = fastdtw(O_Optimal2[0:2, 0:obs+1].T, O_Optimal1[0:2, :].T, dist=euclidean)
 
-print(path)
+a = np.array([1.7529003671623544, 2.24462707550468, 1.5363298485989587, 2.1792146237861627, 1.755393001008553, 2.519175354044347])
 
-print(filter_alignment_path(path))
-
-print(max(1,2))
+print(a - 1)

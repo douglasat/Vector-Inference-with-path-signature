@@ -204,16 +204,15 @@ def getEstimationPath(init, goals):  # compute an estimation from init to each g
         trees[str(g)] = tree
         roots[str(g)] = root
     
-    sig_merged_prune_by_goal = {}
-    sig_by_goal_level = {}
+    sig_branch_by_goal = {}
+    sig_level_by_goal = {}
     for gk, g in enumerate(goals):
         if str(init) != str(g):
             x_eval = []
             y_eval = []
-            theta_eval = []
             dotx_eval = []
             doty_eval = []
-            sig_by_goal_level[str(g)] = []
+            sig_level_by_goal[str(g)] = []
             sig_path = {}
 
             # Create a ProcessPoolExecutor
@@ -248,26 +247,14 @@ def getEstimationPath(init, goals):  # compute an estimation from init to each g
             
             trees[str(g)].naming()
             trees[str(g)].merge()
-            trees[str(g)].render("output", "tree.gv")
-            for k in range(100):
-                nodes = trees[str(g)].get_node_by_level(k)
-                print(nodes)
-
             trees[str(g)].prune()
-
-            for k in range(100):
-                nodes = trees[str(g)].get_node_by_level(k)
-                print(nodes)
-
-            trees[str(g)].render("output", "tree2.gv")
+            # trees[str(g)].render("output", "tree.gv")
             
-            bla
-            
+            # Align trajectory by level
             k = 0
             last_node = 0
             max_data_legth = 0
             nodes = trees[str(g)].get_node_by_level(k)
-            print(nodes)
             while len(nodes) > 0:
                 level_k = []
                 length_data = []
@@ -276,39 +263,31 @@ def getEstimationPath(init, goals):  # compute an estimation from init to each g
                     length_data.append(node.data)
                 
                 max_data_legth = max(max_data_legth, len(length_data))
-                sig_by_goal_level[str(g)].append(level_k)
+                sig_level_by_goal[str(g)].append(level_k)
                 last_node = k
                 k = k + 1
                 nodes = trees[str(g)].get_node_by_level(k)
-                for node in nodes:
-                    print(node.all_levels)
-                print(nodes)
-            
-            print(max_data_legth)
-            bla
 
+            # Align trajectory by branch
             k = 0
-            sig_merged_prune = []
+            sig_branch = []
             visited_branches = []
-            while not len(sig_merged_prune) == max_data_legth: 
+            while not len(sig_branch) == max_data_legth: 
                 nodes = trees[str(g)].get_node_by_level(last_node - k)
-                print(nodes)
-                if len(nodes) == 0:
-                    bla
                 for node in nodes:
                     if not any(int(elem) in visited_branches for elem in node.data):
                         visited_branches.append(int(node.data[0]))
                         all_nodes = trees[str(g)].get_all_nodes_by_branch(int(node.data[0]))
-                        sig_merged_prune.append(nodes_traj_to_signature_traj(all_nodes))
+                        sig_branch.append(nodes_traj_to_signature_traj(all_nodes))
                         
-                        if len(sig_merged_prune) == max_data_legth:
+                        if len(sig_branch) == max_data_legth:
                             break
                 
                 k = k + 1
 
-            sig_merged_prune_by_goal[str(g)] = sig_merged_prune     
+            sig_branch_by_goal[str(g)] = sig_branch   
 
-    return sig_merged_prune_by_goal, sig_by_goal_level
+    return sig_branch_by_goal, sig_level_by_goal
 
 
 def find_max_prop(dist_sig, dist_dw):
@@ -326,16 +305,6 @@ def find_max_prop(dist_sig, dist_dw):
         return list(np.where(original_sig == dist_sig[np.argmin(normalized_sig)])[0])
     else:
         return list(np.where(original_dw == dist_dw[np.argmin(normalized_dw)])[0])
-
-    # min_sig = np.argmin(normalized_sig)
-    # min_dw = np.argmin(normalized_dw)
-
-    # if min_sig < min_dw:
-    #     return list(np.where(original_sig == dist_sig[min_sig])[0])
-    # else:
-    #     return list(np.where(original_dw == dist_dw[min_dw])[0])
-
-    return list(np.where(original_sig == dist_sig[np.argmin(normalized_sig + normalized_dw * 0)])[0])
 
 
 def vector_inference_multi(initial, goal):
@@ -374,6 +343,7 @@ def vector_inference_multi(initial, goal):
         for goal_Hypothese in goal_Hypothesis:
             # Fast Dynamic Time Warping (DTW) algorithm
             dtw_group = []
+            #for x, y in zip(x_app[str(goal_Hypothese)], y_app[str(goal_Hypothese)]):
             for traj in nodes_traj[str(goal_Hypothese)]:
                 if len(traj) > 1:
                     distance_dtw, _ = fastdtw(sig_path_observations[1:], traj[1:], dist=euclidean)
@@ -415,9 +385,9 @@ def vector_inference_multi(initial, goal):
 
 
 if __name__ == "__main__":
-    top_k = 3 # number of solutions in the inference process
-    merge = 1
-    prune = 2.5
+    top_k = 1 # number of solutions in the inference process
+    merge = 0
+    prune = 0
     #Number of cores used in the process
     try:
         if int(sys.argv[2]):
@@ -452,10 +422,10 @@ if __name__ == "__main__":
 
         problem_number = [[initial, goal] for initial in range(0, len(scenario.goalPoints)) for goal in range(0, len(scenario.goalPoints)) if initial != goal]
         
-        obs = vector_inference_multi(7, 0)[0]
-        print(obs)
-        output.save_probability(obs[0], obs[1], obs[2], obs[3], obs[4], obs[5])
-        bla
+        # obs = vector_inference_multi(7, 0)[0]
+        # print(obs)
+        # output.save_probability(obs[0], obs[1], obs[2], obs[3], obs[4], obs[5])
+        # bla
 
         # Create a ProcessPoolExecutor
         with concurrent.futures.ProcessPoolExecutor(max_workers=num_cores) as executor:

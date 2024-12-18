@@ -172,6 +172,15 @@ def compute_approximation(init, g, seed):
     return [[qx, qy, qdotx, qdoty, sig_path]]
 
 
+def nodes_traj_to_signature_traj(node_traj):
+    traj = []
+    traj.append((1,))
+    for node in node_traj:
+        if not node.identifier == (1,):
+            traj.append(node.identifier)
+    return traj 
+
+
 def getEstimationPath(init, goals):  # compute an estimation from init to each goal in the set
     # path signature trees
     trees = {}
@@ -183,17 +192,15 @@ def getEstimationPath(init, goals):  # compute an estimation from init to each g
         trees[str(g)] = tree
         roots[str(g)] = root
     
-    x = {}
-    y = {}
-    sig_by_goal = {}
+    sig_branch_by_goal = {}
+    sig_level_by_goal = {}
     for gk, g in enumerate(goals):
         if str(init) != str(g):
             x_eval = []
             y_eval = []
-            theta_eval = []
             dotx_eval = []
             doty_eval = []
-            sig_by_goal[str(g)] = []
+            sig_level_by_goal[str(g)] = []
             sig_path = {}
 
             # Create a ProcessPoolExecutor
@@ -227,25 +234,48 @@ def getEstimationPath(init, goals):  # compute an estimation from init to each g
                     previous = node
             
             trees[str(g)].naming()
+            trees[str(g)].merge()
             trees[str(g)].prune()
-            #trees[str(g)].merge()
-            trees[str(g)].render("output", "tree.gv")
-
+            # trees[str(g)].render("output", "tree.gv")
+            
+            # Align trajectory by level
             k = 0
+            last_node = 0
+            max_data_legth = 0
             nodes = trees[str(g)].get_node_by_level(k)
             while len(nodes) > 0:
                 level_k = []
+                length_data = []
                 for node in nodes:
                     level_k.append(node.identifier)
+                    length_data.append(node.data)
                 
-                sig_by_goal[str(g)].append(level_k)
+                max_data_legth = max(max_data_legth, len(length_data))
+                sig_level_by_goal[str(g)].append(level_k)
+                last_node = k
                 k = k + 1
                 nodes = trees[str(g)].get_node_by_level(k)
 
-            x[str(g)] = x_eval
-            y[str(g)] = y_eval
+            # Align trajectory by branch
+            k = 0
+            sig_branch = []
+            visited_branches = []
+            while not len(sig_branch) == max_data_legth: 
+                nodes = trees[str(g)].get_node_by_level(last_node - k)
+                for node in nodes:
+                    if not any(int(elem) in visited_branches for elem in node.data):
+                        visited_branches.append(int(node.data[0]))
+                        all_nodes = trees[str(g)].get_all_nodes_by_branch(int(node.data[0]))
+                        sig_branch.append(nodes_traj_to_signature_traj(all_nodes))
+                        
+                        if len(sig_branch) == max_data_legth:
+                            break
+                
+                k = k + 1
 
-    return x, y, sig_by_goal
+            sig_branch_by_goal[str(g)] = sig_branch     
+
+    return sig_branch_by_goal, sig_level_by_goal
 
   
 def find_max_prop(vector):
@@ -274,7 +304,7 @@ def vector_inference_multi(initial, goal):
     print('Group:', group_number)
 
     start_time = time.time()
-    _, _, sig_by_goal = getEstimationPath(state_init, scenario.goalPoints)
+    _, sig_by_goal = getEstimationPath(state_init, scenario.goalPoints)
     offline_time = time.time() - start_time
     
     # compute the online part of the Estimation method + path signature
@@ -318,9 +348,9 @@ def vector_inference_multi(initial, goal):
 
 
 if __name__ == "__main__":
-    top_k = 2 # number of solutions in the inference process
-    merge = 1
-    prune = 5
+    top_k = 1 # number of solutions in the inference process
+    merge = 0
+    prune = 0
     #Number of cores used in the process
     try:
         if int(sys.argv[2]):
@@ -355,10 +385,10 @@ if __name__ == "__main__":
 
         problem_number = [[initial, goal] for initial in range(0, len(scenario.goalPoints)) for goal in range(0, len(scenario.goalPoints)) if initial != goal]
         
-        obs = vector_inference_multi(7, 0)[0]
-        print(obs)
-        output.save_probability(obs[0], obs[1], obs[2], obs[3], obs[4], obs[5])
-        bla
+        # obs = vector_inference_multi(7, 0)[0]
+        # print(obs)
+        # output.save_probability(obs[0], obs[1], obs[2], obs[3], obs[4], obs[5])
+        # bla
 
         # Create a ProcessPoolExecutor
         with concurrent.futures.ProcessPoolExecutor(max_workers=num_cores) as executor:

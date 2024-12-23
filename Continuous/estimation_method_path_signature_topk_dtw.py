@@ -290,7 +290,7 @@ def getEstimationPath(init, goals):  # compute an estimation from init to each g
     return sig_branch_by_goal, sig_level_by_goal
 
 
-def find_max_prop(dist_sig, dist_dw):
+def find_max_prop2(dist_sig, dist_dw):
     dist_sig = np.array(dist_sig)
     original_sig = dist_sig.copy()
     dist_dw = np.array(dist_dw)
@@ -306,6 +306,30 @@ def find_max_prop(dist_sig, dist_dw):
     else:
         return list(np.where(original_dw == dist_dw[np.argmin(normalized_dw)])[0])
 
+
+def find_max_prop1(dist_sig, dist_dw):
+    dist_sig = np.array(dist_sig)
+    original_sig = dist_sig.copy()
+    dist_dw = np.array(dist_dw)
+    original_dw = dist_dw.copy()
+    dist_sig = np.delete(dist_sig, np.where(dist_sig == 1e6))
+    dist_dw = np.delete(dist_dw, np.where(dist_dw == 1e6))
+
+    normalized_sig = dist_sig / np.max(dist_sig)
+    normalized_dw = dist_dw / np.max(dist_dw)
+    
+    if np.std(normalized_sig) > np.std(normalized_dw):
+        return list(np.where(original_sig == dist_sig[np.argmin(normalized_sig)])[0])
+    else:
+        return list(np.where(original_dw == dist_dw[np.argmin(normalized_dw)])[0])
+
+
+def find_max_prop(vector):
+    max_value = np.min(vector)
+    max_prop = [index for index, value in enumerate(vector) if max_value == value]
+    # max_prop = [index for index, value in enumerate(vector) if max_value-0.10 <= value <= max_value]
+
+    return max_prop
 
 def vector_inference_multi(initial, goal):
     result_list = []
@@ -325,7 +349,7 @@ def vector_inference_multi(initial, goal):
     print('Group:', group_number)
 
     start_time = time.time()
-    nodes_traj, sig_by_goal = getEstimationPath(state_init, scenario.goalPoints)
+    nodes_traj, _ = getEstimationPath(state_init, scenario.goalPoints)
     offline_time = time.time() - start_time
     
     # compute the online part of the Estimation method + path signature
@@ -336,7 +360,7 @@ def vector_inference_multi(initial, goal):
         sample_now = sampled_obser.index(obs) + 1
         print('Evaluating observation %d of 6' % sample_now)
 
-        prob = []
+        # prob = []
         prob_dw = []
         #sig_path_observations = np.array(sig.get_signature(O_Optimal[0:2, 0:obs + 1].T)[0])
         sig_path_observations = sig.get_all_signatures(O_Optimal[0:2, 0:obs + 1].T)
@@ -346,37 +370,39 @@ def vector_inference_multi(initial, goal):
             #for x, y in zip(x_app[str(goal_Hypothese)], y_app[str(goal_Hypothese)]):
             for traj in nodes_traj[str(goal_Hypothese)]:
                 if len(traj) > 1:
-                    distance_dtw, _ = fastdtw(sig_path_observations[1:], traj[1:], dist=euclidean)
-                    #distance_dtw, path = fastdtw(O_Optimal[0:2, 0:obs+1].T, np.array([x, y]).T, dist=euclidean)
+                    distance_dtw, path = fastdtw(sig_path_observations[1:], traj[1:], dist=euclidean)
+                    path = np.array(path)
+                    traj = np.array(traj[1:])
+                    distance_dtw = np.linalg.norm(sig_path_observations[-1] - traj[path[obs - 1, 1]])
                     dtw_group.append(distance_dtw)
                 else:
                     dtw_group.append(1e10)
             
             # Landmarks
-            sig_group = []
-            signatures_by_level = sig_by_goal[str(goal_Hypothese)]
-            if len(signatures_by_level) - 1 >= obs:
-                for sig_g in signatures_by_level[obs]:
-                    if not sig_g == (1,):
-                        error = np.linalg.norm(sig_path_observations[obs] - np.array(sig_g)) # inference process
-                        sig_group.append(error)
-                    else:
-                        sig_group.append(1e10)    
-            else:
-                for sig_g in signatures_by_level[-1]:
-                    if not sig_g == (1,):
-                        error = np.linalg.norm(sig_path_observations[obs] - np.array(sig_g)) # inference process
-                        sig_group.append(error)
-                    else:
-                        sig_group.append(1e10) 
+            # sig_group = []
+            # signatures_by_level = sig_by_goal[str(goal_Hypothese)]
+            # if len(signatures_by_level) - 1 >= obs:
+            #     for sig_g in signatures_by_level[obs]:
+            #         if not sig_g == (1,):
+            #             error = np.linalg.norm(sig_path_observations[obs] - np.array(sig_g)) # inference process
+            #             sig_group.append(error)
+            #         else:
+            #             sig_group.append(1e10)    
+            # else:
+            #     for sig_g in signatures_by_level[-1]:
+            #         if not sig_g == (1,):
+            #             error = np.linalg.norm(sig_path_observations[obs] - np.array(sig_g)) # inference process
+            #             sig_group.append(error)
+            #         else:
+            #             sig_group.append(1e10) 
 
 
-            prob.append(np.min(sig_group)) 
+            # prob.append(np.min(sig_group)) 
             prob_dw.append(np.min(dtw_group))
             
-        prob = np.insert(prob, initial, 1e6)
-        prob_dw = np.insert(prob_dw, initial, 1e6)      
-        solution_set.append(find_max_prop(prob, prob_dw))        
+        # prob = np.insert(prob, initial, 1e6)
+        prob_dw = np.insert(prob_dw, initial, 1e6)     
+        solution_set.append(find_max_prop(prob_dw))       
 
     online_time = time.time() - start_time
     result_list.append([initial, goal, solution_set, sum_planner, online_time, offline_time])
@@ -422,7 +448,7 @@ if __name__ == "__main__":
 
         problem_number = [[initial, goal] for initial in range(0, len(scenario.goalPoints)) for goal in range(0, len(scenario.goalPoints)) if initial != goal]
         
-        # obs = vector_inference_multi(7, 0)[0]
+        # obs = vector_inference_multi(7, 2)[0]
         # print(obs)
         # output.save_probability(obs[0], obs[1], obs[2], obs[3], obs[4], obs[5])
         # bla

@@ -9,8 +9,6 @@ from generate_scenario import Scenario
 import cupy as cp
 import cupyx
 
-#sys.path.insert(0, "/home/douglas/Documentos/Dev/omplapp-1.5.2-Source/ompl/py-bindings")
-#sys.path.insert(0, "/home/douglas/ompl_new/ompl-1.6.0/py-bindings")
 import ompl.base as ob
 import ompl.geometric as og  # needed for asGeometric()
 

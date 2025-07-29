@@ -3,7 +3,7 @@ import setuptools
 setuptools.setup(
     name="geometric_plan_c",
     version="0.1",
-    author="Douglas Tesch",
+    author="Anonymous",
     description="Return all solutions of a geometric problem",
     ext_modules=[
         setuptools.Extension(

@@ -1,3 +1,4 @@
+"""Module for Path Signature Trees"""
 from collections import defaultdict
 import sys
 import os
@@ -68,6 +69,7 @@ class Node():
 
 
 class Tree():
+    """Class for a Path Signature Tree"""
 
     def __init__(
         self,
@@ -107,7 +109,7 @@ class Tree():
         self.nodes[node.identifier] = node
 
     def contains(self, identifier: str) -> bool:
-        """_summary_
+        """ Method to check whether the tree contains the node or not.
 
         Args:
             identifier (str): Node identifier
@@ -177,7 +179,16 @@ class Tree():
         """
         return self.root.to_dict()
 
-    def get_node_info(self, node: Node):
+    def get_node_info(self, node: Node) -> tuple[int, Union[list[Node], None]]:
+        """ Get node information and its children.
+
+        Args:
+            node (Node): node to get information.
+
+        Returns:
+            node_name (index): node index in the tree
+            node_childrn (list[Node] || None): list of node children or None if leaf.
+        """
         try:
             node_name = list(node.keys())[0]
             node_children = node[node_name].get('children', None)
@@ -186,7 +197,17 @@ class Tree():
             node_children = None
         return node_name, node_children
 
-    def get_tree_size_and_depth(self, node: Node, depth: int = 0):
+    def get_tree_size_and_depth(self, node: Node, depth: int = 0) -> tuple[int]:
+        """ Get tree node count and depth.
+
+        Args:
+            node (Node): node to check from.
+            depth (int): argument for recursive count of depth.
+
+        Returns:
+            node_count (int): number of node in the tree.
+            max_depth (int): depth from the tree.
+        """
         _, children = self.get_node_info(node)
         if children is None:
             return 1, depth
@@ -202,6 +223,7 @@ class Tree():
         return node_count, max_depth
 
     def naming(self, node: Node = None, name: str = None) -> None:
+        """ Function to name all nodes in a tree """
         if name is None:
             siblings = []
             if node is None:

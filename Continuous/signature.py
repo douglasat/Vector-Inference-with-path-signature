@@ -1,3 +1,4 @@
+""" Module for retrieving signatures """
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -17,7 +18,8 @@ class Signatures:
     depth: int = 2
     device: str = "gpu" if torch.cuda.is_available() else "cpu"
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
+        """ Function to compute all files in a path and compute their respective signatures. """
         trajectories = [
             join(self.path, f)
             for f in listdir(self.path)
@@ -38,6 +40,14 @@ class Signatures:
         }
 
     def get_all_signatures(self, path: list[list[float]]) -> list[list[float]]:
+        """ Compute all partial signatures from a list of numpy arrays.
+
+        Args:
+            path (list[list[float]]): path.
+
+        Returns:
+            signatures (list[list[float]]): list of all partial signatures from the given path.
+        """
         path = torch.from_numpy(path)[None]
         signature_path = signatory.Path(path, self.depth)
 
@@ -52,6 +62,14 @@ class Signatures:
         return tuple(signatures)
 
     def get_signature(self, path: list[list[float]]) -> list[float]:
+        """ Get a single singature from the current path.
+
+        Args:
+            path (list[list[float]]): path 
+
+        Returns:
+            list[float]: signature for input path.
+        """
         if path.shape[0] == 1:
             return [1]
 
